@@ -5,7 +5,7 @@
 - Add a clean architecture guide, and links to in-depth articles from the README and guides
 - Add the MIT license
 - Add an install guide
-- Make the README's diagram plain text, so it shows with the page, and keep its badges in the repo, so it relies on no outside service
+- Draw the README's diagram as an image, in light and dark, and keep it and the badges in the repo, so the README relies on no outside service
 
 ## 0.1.1
 

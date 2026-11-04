@@ -11,13 +11,10 @@ Calling `buy()` is the easy part. Then Google Play refunds a sale because nobody
 
 `reusable_iap` is the code every app ends up writing around Flutter's official [`in_app_purchase`](https://pub.dev/packages/in_app_purchase) plugin, written once and tested. You keep your own paywall, your own state management and, if you have one, your own backend. Nobody sits between you and the stores.
 
-```text
-               buy, restore
-Your paywall ----------------> Reusable IAP ---> in_app_purchase ---> App Store
-             <----------------          |                       \---> Google Play
-             products, access, errors   |
-                                        '- - optional check - -> Your server
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="doc/images/how_it_works_dark.svg">
+  <img src="doc/images/how_it_works_light.svg" alt="Your paywall calls buy and restore on Reusable IAP, and gets back products, access and errors. Reusable IAP uses the in_app_purchase plugin, which reaches the App Store and Google Play. It can also ask your own server to check a purchase." width="100%">
+</picture>
 
 ## The traps it saves you from
 
