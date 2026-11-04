@@ -2,23 +2,21 @@
 
 **In-app purchases for Flutter, without the plumbing.** Sell subscriptions, consumables and non-consumables on the App Store and Google Play through one small API.
 
-[![Flutter: iOS and Android](https://img.shields.io/badge/Flutter-iOS%20%7C%20Android-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Built on in_app_purchase](https://img.shields.io/badge/built%20on-in__app__purchase-0175C2)](https://pub.dev/packages/in_app_purchase)
-![StoreKit 2 and Google Play Billing](https://img.shields.io/badge/runs%20on-StoreKit%202%20%7C%20Play%20Billing-555555)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Flutter: iOS and Android](doc/badges/flutter.svg)](https://flutter.dev)
+[![Built on in_app_purchase](doc/badges/in_app_purchase.svg)](https://pub.dev/packages/in_app_purchase)
+![StoreKit 2 and Google Play Billing](doc/badges/billing.svg)
+[![License: MIT](doc/badges/license.svg)](LICENSE)
 
 Calling `buy()` is the easy part. Then Google Play refunds a sale because nobody acknowledged it. One subscription comes back as several products. A payment finishes while your app is closed, and lands on a launch you weren't expecting.
 
 `reusable_iap` is the code every app ends up writing around Flutter's official [`in_app_purchase`](https://pub.dev/packages/in_app_purchase) plugin, written once and tested. You keep your own paywall, your own state management and, if you have one, your own backend. Nobody sits between you and the stores.
 
-```mermaid
-flowchart LR
-    A[Your paywall] -- buy, restore --> B[Reusable IAP]
-    B -- products, access, errors --> A
-    B --> C[in_app_purchase]
-    C --> D[App Store]
-    C --> E[Google Play]
-    B -. optional check .-> F[Your server]
+```text
+               buy, restore
+Your paywall ----------------> Reusable IAP ---> in_app_purchase ---> App Store
+             <----------------          |                       \---> Google Play
+             products, access, errors   |
+                                        '- - optional check - -> Your server
 ```
 
 ## The traps it saves you from
@@ -58,16 +56,17 @@ Read more: [in_app_purchase vs RevenueCat](https://bimalkhatri.com.np/blogs/in-a
 
 ## Quick start
 
-```yaml
-dependencies:
-  reusable_iap:
-    git:
-      url: https://github.com/yhh-it-solutions/reusable_iap.git
+Reusable IAP lives on GitHub, not pub.dev, so you add it by its Git URL:
+
+```bash
+flutter pub add reusable_iap --git-url=https://github.com/yhh-it-solutions/reusable_iap.git
 ```
 
-That's the only billing package you add. It brings `in_app_purchase` with it.
+That's the only billing package you add. It brings `in_app_purchase` with it. For requirements and pinning a version, see [install](doc/using_the_package.md#install).
 
 ```dart
+import 'package:reusable_iap/reusable_iap.dart';
+
 final iap = IapService(
   config: IapConfig(
     products: {
@@ -94,7 +93,7 @@ await iap.buy('pro_monthly');
 await iap.restore();         // Behind a "Restore Purchases" button.
 ```
 
-Next: [using the package](doc/using_the_package.md), from catalog to errors and testing.
+Next: [using the package](doc/using_the_package.md), from install to errors and testing.
 
 ## What you can sell
 
@@ -156,7 +155,7 @@ Read more: the [clean architecture guide](doc/clean_architecture.md) builds it s
 |---|---|
 | [In-app purchases explained](doc/in_app_purchases_explained.md) | The concepts and the three product types |
 | [Store setup](doc/store_setup.md) | What you need, what to create, and where |
-| [Using the package](doc/using_the_package.md) | From catalog to paywall, errors and testing |
+| [Using the package](doc/using_the_package.md) | Installing it, then from catalog to paywall, errors and testing |
 | [Clean architecture](doc/clean_architecture.md) | Domain, data and presentation layers, explained on the example |
 | [Your own backend](doc/your_own_backend.md) | Verifying purchases on your server |
 | [Troubleshooting](doc/troubleshooting.md) | Products not found, refunds, stuck purchases |

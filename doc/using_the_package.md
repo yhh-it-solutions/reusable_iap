@@ -2,6 +2,54 @@
 
 The API, step by step. To see how it all fits in a real app with layers, read [clean architecture](clean_architecture.md) next.
 
+## Install
+
+From your app's folder:
+
+```bash
+flutter pub add reusable_iap --git-url=https://github.com/yhh-it-solutions/reusable_iap.git
+```
+
+The package lives on GitHub, not pub.dev, which is why it needs the URL. The command adds this to `pubspec.yaml`. You can also write it by hand and run `flutter pub get`:
+
+```yaml
+dependencies:
+  reusable_iap:
+    git: https://github.com/yhh-it-solutions/reusable_iap.git
+```
+
+Then import it wherever you use it:
+
+```dart
+import 'package:reusable_iap/reusable_iap.dart';
+```
+
+Don't add `in_app_purchase` yourself, because it comes with this package.
+
+| Needs | Minimum |
+|---|---|
+| Dart | 3.11.1 |
+| Android | API 23 |
+| iOS | 15, because the plugin uses StoreKit 2 |
+
+**Staying on a version.** `pubspec.lock` records the exact commit, so commit that file and your whole team builds the same code. To move to the newest commit:
+
+```bash
+flutter pub upgrade reusable_iap
+```
+
+To hold one version even through upgrades, add a `ref`, which can be a commit, branch or tag:
+
+```yaml
+dependencies:
+  reusable_iap:
+    git:
+      url: https://github.com/yhh-it-solutions/reusable_iap.git
+      ref: 52f929d
+```
+
+**The stores come next.** The package compiles without them, but nothing can be bought until your products exist and iOS has the In-App Purchase capability. See [store setup](store_setup.md).
+
 ## 1. List your products
 
 ```dart
