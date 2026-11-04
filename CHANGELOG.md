@@ -8,6 +8,7 @@
 - Keep loaded products when a refresh fails
 - Check the store again while it is unavailable, so a later `loadProducts`, `buy` or `restore` recovers
 - Share one store check between overlapping `initialize` calls
+- Rewrite the README and add guides in `doc/`
 
 ## 0.1.0
 

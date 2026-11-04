@@ -1,5 +1,5 @@
 name: reusable_iap
-description: Headless Flutter in-app purchase service for catalog loading, purchases, restores, entitlements, and verification.
+description: In-app purchases for Flutter. Subscriptions, consumables and non-consumables on the App Store and Google Play, with optional backend verification.
 version: 0.1.1
 
 environment:
@@ -11,6 +11,7 @@ topics:
   - subscriptions
   - billing
   - monetization
+  - storekit
 
 dependencies:
   equatable: ">=2.0.8 <4.0.0"

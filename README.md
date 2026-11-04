@@ -1,31 +1,31 @@
 # reusable_iap
 
-`reusable_iap` is a headless Flutter in-app purchase service built on top of [`in_app_purchase`](https://pub.dev/packages/in_app_purchase).
+**In-app purchases for Flutter, without the plumbing.** Sell subscriptions, consumables and non-consumables on the App Store and Google Play through one small API. You keep your own paywall, your own state management and, if you have one, your own backend.
 
-It wraps store availability checks, product loading, purchase updates, restore flows, entitlement mapping, verification, and purchase completion without forcing a paywall UI or a state-management package.
+Built on Flutter's official [`in_app_purchase`](https://pub.dev/packages/in_app_purchase) plugin, so it runs on StoreKit 2 and Google Play Billing with no third party in between.
 
-## Features
+## What it is, and what it isn't
 
-- Headless `IapServiceApi` for `initialize`, `loadProducts`, `buy`, `restore`, and entitlement checks
-- Support for consumables, non-consumables, and subscriptions
-- Normalized `IapProduct`, `IapPurchase`, `IapState`, and `IapError` models
-- Centralized purchase lifecycle handling for pending, purchased, restored, canceled, and error states
-- Internal transaction completion / acknowledgement handling
-- App-defined entitlement mapping through `EntitlementResolver`
-- App-defined verification through `PurchaseVerifier`
-- Testable design through the `BillingGateway` abstraction
+| It is | It isn't |
+|---|---|
+| A headless layer over the official plugin | A paywall, or any UI at all |
+| One stream of state: products, loading, errors, what the user owns | A hosted service like RevenueCat: no dashboard, no charts, no sign-up, no fee |
+| The purchase lifecycle done for you: pending, restore, completing | A server. It can call yours, but it doesn't come with one |
+| Products mapped to access, so `pro_monthly` and `lifetime` can both mean `premium` | A way to take card payments or sell physical goods |
 
-## What This Package Does Not Do
+New to this? [What in-app purchases are](doc/in_app_purchases_explained.md), including subscriptions, consumables and non-consumables.
 
-- Render a paywall
-- Impose app branding or button styles
-- Depend on Provider, Bloc, Riverpod, or any other state-management library
-- Assume product IDs are the same thing as entitlements
-- Force one backend verification strategy
+## Should you use it?
 
-## Installation
+**Use it if** you sell from a Flutter app on the App Store and Google Play, want no one between you and the stores, and either have your own backend or are selling something low-stakes like removing ads.
 
-The package isn't on pub.dev, so depend on it from Git:
+**Skip it if** you:
+
+- want renewal tracking across devices, charts and hosted paywalls without running a server. Use [RevenueCat](https://www.revenuecat.com/).
+- need several plans under one product, promotional offers or upgrade paths. Use `in_app_purchase` directly.
+- sell physical goods or anything used outside the app. Stores don't allow in-app purchases for those. Use a payment provider like Stripe.
+
+## Quick start
 
 ```yaml
 dependencies:
@@ -34,97 +34,76 @@ dependencies:
       url: https://github.com/yhh-it-solutions/reusable_iap.git
 ```
 
-After adding the package, configure your products in App Store Connect / Google Play Console as usual.
-
-## Quick Start
-
 ```dart
-import 'package:reusable_iap/reusable_iap.dart';
-
 final iap = IapService(
   config: IapConfig(
     products: {
       const IapProductDefinition.subscription('pro_monthly'),
-      const IapProductDefinition.subscription('pro_yearly'),
-      const IapProductDefinition.nonConsumable('lifetime_unlock'),
+      const IapProductDefinition.nonConsumable('lifetime'),
       const IapProductDefinition.consumable('coins_100'),
     },
   ),
-  verifyPurchase: (purchase) async {
-    // Call your backend when you need server-side validation.
-    return true;
-  },
-  entitlementResolver: (purchase) {
-    switch (purchase.productId) {
-      case 'pro_monthly':
-      case 'pro_yearly':
-      case 'lifetime_unlock':
-        return {'premium'};
-      default:
-        return const <String>{};
-    }
+  // Which access each purchase gives.
+  entitlementResolver: (purchase) => switch (purchase.productId) {
+    'pro_monthly' || 'lifetime' => {'premium'},
+    _ => const <String>{},
   },
 );
 
-await iap.initialize();
-final products = await iap.loadProducts();
-
-final subscription = iap.state.listen((state) {
-  if (state.error != null) {
-    // Show a friendly error message.
-  }
-
-  if (iap.hasEntitlement('premium')) {
-    // Unlock premium features.
-  }
+iap.state.listen((state) {
+  // Draw your paywall from state.products, state.loading and state.error.
+  final isPremium = state.activeEntitlements.contains('premium');
 });
 
-await iap.buy(products.first.id);
-await iap.restore();
-
-await subscription.cancel();
-iap.dispose();
+await iap.initialize();      // As early as you can, at app start.
+await iap.loadProducts();
+await iap.buy('pro_monthly');
+await iap.restore();         // Behind a "Restore Purchases" button.
 ```
 
-## Product IDs vs Entitlements
+The code is the small part. Products must exist in both stores first:
 
-Product IDs are store-facing. Entitlements are app-facing.
+| Step | Where | What |
+|---|---|---|
+| 1. Paperwork | App Store Connect, Play Console | Paid Apps Agreement, tax and bank; payments profile |
+| 2. A build | Xcode, Play Console | In-App Purchase capability; a build on a testing track |
+| 3. Products | App Store Connect, Play Console | Create them with the same IDs as your code, and activate them |
+| 4. Testers | App Store Connect, Play Console | Sandbox accounts; license testers |
 
-That means products like `pro_monthly`, `pro_yearly`, and `lifetime_unlock` can all unlock the same entitlement such as `premium`.
+The [store setup guide](doc/store_setup.md) walks through each one.
 
-## Public API
+## Can it work with my own backend?
+
+Yes. Pass `verifyPurchase` and nothing is granted until your server says the purchase is real:
 
 ```dart
-abstract interface class IapServiceApi {
-  Stream<IapState> get state;
-  IapState get currentState;
-  Future<void> initialize();
-  Future<List<IapProduct>> loadProducts();
-  Future<void> buy(String productId);
-  Future<void> restore();
-  bool hasEntitlement(String entitlement);
-  void dispose();
-}
+IapService(
+  config: config,
+  verifyPurchase: (purchase) => myApi.verify(
+    store: purchase.verificationData!.source,
+    proof: purchase.verificationData!.serverVerificationData,
+    productId: purchase.productId,
+  ),
+);
 ```
 
-## Testing
+Without it, the app trusts the store's answer on the device. That's fine for removing ads, but not for coins or paid content. See [using your own backend](doc/your_own_backend.md).
 
-The service depends on `BillingGateway`, not directly on `InAppPurchase.instance`, so you can unit test:
+## Docs
 
-- store available / unavailable
-- product catalog queries
-- successful purchases
-- canceled or failed purchases
-- restore flows
-- verification failures
+- [In-app purchases explained](doc/in_app_purchases_explained.md): the concepts and the three product types
+- [Store setup](doc/store_setup.md): what you need, what to create, and where
+- [Using the package](doc/using_the_package.md): from catalog to paywall, errors and testing
+- [Your own backend](doc/your_own_backend.md): verifying purchases on your server
+- [Troubleshooting](doc/troubleshooting.md): products not found, refunds, stuck purchases
 
-## Example
+A runnable example is in [`example/`](example/lib/main.dart).
 
-A minimal example app is included in `example/lib/main.dart`. Replace the sample product IDs with your own and run it on a configured iOS or Android device.
-
-## Good To Know
-
-- **Restores arrive after `restore()` returns.** It resolves once the request is sent. Restored purchases come in on the state stream afterwards, so give them a moment before treating a user as not subscribed. If `error.code` is `restoreFailed`, the store couldn't answer, which doesn't mean the user isn't subscribed.
-- **Entitlements only grow during a session.** A subscription that lapses while the app is open stays active until the next launch, when a fresh `restore()` finds only what's still active.
-- **One plan per subscription product.** On Google Play the package uses the first base plan or offer the store returns for an ID, so price and purchase always match. To sell two plans, use two product IDs.
-- **A failed verification leaves the purchase uncompleted.** The store sends it again, so a passing check can still deliver it, and Google Play refunds it if it's never acknowledged.
+<!--
+Blog links to add here when the in-app purchases series is published on
+bimalkhatri.com.np/blogs (all 404 on 2026-11-04, so not linked yet):
+flutter-in-app-purchases-guide, in-app-purchase-vs-revenuecat,
+in-app-purchase-terms-explained, app-store-connect-in-app-purchases,
+google-play-one-time-products-subscriptions, verify-in-app-purchases-server,
+flutter-in-app-purchase-not-working.
+-->
