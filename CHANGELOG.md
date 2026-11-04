@@ -4,7 +4,8 @@
 - Rebuild the example as a small store in clean architecture, with tests that need no store
 - Add a clean architecture guide, and links to in-depth articles from the README and guides
 - Add the MIT license
-- Add an install guide, and make the README load faster: the badges now live in the repo and the diagram is plain text
+- Add an install guide
+- Make the README's diagram plain text, so it shows with the page, and keep its badges in the repo, so it relies on no outside service
 
 ## 0.1.1
 
