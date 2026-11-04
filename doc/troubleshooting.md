@@ -32,3 +32,7 @@
 - [ ] If the app was just published to a track, wait: it can take a few hours
 
 Neither store tells your app why an ID is missing, which is why these are checklists. On Google Play, the reason never reaches Dart.
+
+## Read more
+
+- [Flutter In-App Purchase Not Working: Products Not Found](https://bimalkhatri.com.np/blogs/flutter-in-app-purchase-not-working): products in `notFoundIDs`, `isAvailable` false, refunds after three days, purchases replayed on every launch, and pending purchases, in more depth.

@@ -55,3 +55,8 @@ sequenceDiagram
 ```
 
 The last step matters. Google refunds a purchase that isn't acknowledged within three days, and Apple keeps delivering an unfinished one on every launch. This package completes purchases for you.
+
+## Read more
+
+- [In-App Purchase Terms: Consumable vs Non-Consumable](https://bimalkhatri.com.np/blogs/in-app-purchase-terms-explained): every term for both stores, including subscription groups, base plans, signed transactions and purchase tokens.
+- [App Store and Google Play Commission in 2026](https://bimalkhatri.com.np/blogs/app-store-google-play-fees): what each store keeps from a sale, worked through before taxes.

@@ -1,5 +1,7 @@
 # Using the package
 
+The API, step by step. To see how it all fits in a real app with layers, read [clean architecture](clean_architecture.md) next.
+
 ## 1. List your products
 
 ```dart
@@ -119,3 +121,9 @@ final iap = IapService(config: config, gateway: FakeGateway());
 ```
 
 Push a `BillingPurchase` onto the stream and assert on `iap.currentState`. See [`test/reusable_iap_test.dart`](../test/reusable_iap_test.dart). Real purchases still need a real device and test accounts.
+
+## Read more
+
+- [Clean architecture](clean_architecture.md): where each of these pieces goes in a real app.
+- [Flutter In-App Purchases: The Complete 2026 Guide](https://bimalkhatri.com.np/blogs/flutter-in-app-purchases-guide): the whole journey, from store setup to fees.
+- [Flutter in_app_purchase Tutorial: Coins and Subscriptions](https://bimalkhatri.com.np/blogs/flutter-in-app-purchase-tutorial): the same flow built directly on the plugin, so you can see what this package takes care of.

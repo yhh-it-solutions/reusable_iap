@@ -53,3 +53,13 @@ Nothing loads until it's active. If you can, use one base plan per subscription:
 - **New personal Google accounts** must run a closed test with at least 12 testers for 14 days before production.
 
 Stuck? See [troubleshooting](troubleshooting.md).
+
+## Read more
+
+Each step in depth:
+
+- [Paid Apps Agreement and Google Play Payments Profile](https://bimalkhatri.com.np/blogs/paid-apps-agreement-google-payments-profile): the agreement, tax forms and bank account, until it reads Active.
+- [App Store Connect In-App Purchases and Subscription Groups](https://bimalkhatri.com.np/blogs/app-store-connect-in-app-purchases): a consumable, a lifetime unlock and a subscription group, field by field, and sending them to review.
+- [Google Play In-App Products, Base Plans and Subscriptions](https://bimalkhatri.com.np/blogs/google-play-one-time-products-subscriptions): a billing build, purchase options, base plans and a free-trial offer.
+- [Add a Sandbox Account on iPhone and Test In-App Purchases](https://bimalkhatri.com.np/blogs/ios-sandbox-testing-in-app-purchases): a StoreKit file in Xcode, the sandbox, and TestFlight.
+- [Google Play License Testing](https://bimalkhatri.com.np/blogs/google-play-license-testing): license testers, test cards and fast renewal times.

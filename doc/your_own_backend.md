@@ -73,3 +73,8 @@ sequenceDiagram
 - **Android consumables are consumed before your check.** By default the plugin consumes them as they arrive, so a failed check won't bring them back. To hold that step, set `autoConsumeConsumables: false` in `IapConfig` and consume from your server through the Play Developer API.
 - **Renewals and refunds happen while the app is closed.** To know about them, subscribe to [App Store Server Notifications](https://developer.apple.com/documentation/appstoreservernotifications) and Google's [Real-time developer notifications](https://developer.android.com/google/play/billing/rtdn-reference). Then your server is the source of truth, and the app should ask it rather than rely on `activeEntitlements`.
 - **Send your user's ID yourself**, as above. The package doesn't set the store's account token.
+
+## Read more
+
+- [In-App Purchase Server Verification: StoreKit 2, Google Play](https://bimalkhatri.com.np/blogs/verify-in-app-purchases-server): verifying the StoreKit 2 JWS with Apple's library and asking the Google Play Developer API, then delivering and finishing.
+- [Clean architecture](clean_architecture.md#recipes): where the call to your server goes in a layered app.
