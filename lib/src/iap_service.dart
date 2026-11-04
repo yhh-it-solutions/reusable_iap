@@ -18,9 +18,9 @@ class IapService implements IapServiceApi {
     PurchaseVerifier? verifyPurchase,
     EntitlementResolver? entitlementResolver,
     BillingGateway? gateway,
-  }) : _verifyPurchase = verifyPurchase ?? _acceptAllPurchases,
-       _entitlementResolver = entitlementResolver ?? _emptyEntitlements,
-       _gateway = gateway ?? FlutterBillingGateway();
+  })  : _verifyPurchase = verifyPurchase ?? _acceptAllPurchases,
+        _entitlementResolver = entitlementResolver ?? _emptyEntitlements,
+        _gateway = gateway ?? FlutterBillingGateway();
 
   final IapConfig config;
   final PurchaseVerifier _verifyPurchase;
@@ -41,14 +41,14 @@ class IapService implements IapServiceApi {
   /// at the moment of listening means an update can't slip past in between.
   @override
   Stream<IapState> get state => Stream<IapState>.multi((listener) {
-    listener.add(_state);
-    final subscription = _stateController.stream.listen(
-      listener.add,
-      onError: listener.addError,
-      onDone: listener.close,
-    );
-    listener.onCancel = subscription.cancel;
-  });
+        listener.add(_state);
+        final subscription = _stateController.stream.listen(
+          listener.add,
+          onError: listener.addError,
+          onDone: listener.close,
+        );
+        listener.onCancel = subscription.cancel;
+      });
 
   @override
   IapState get currentState => _state;
@@ -75,21 +75,20 @@ class IapService implements IapServiceApi {
     _purchaseSubscription ??= _gateway.purchaseStream.listen(
       (purchases) {
         unawaited(
-          _handlePurchaseUpdates(purchases).catchError((
-            Object error,
-            StackTrace stackTrace,
-          ) {
-            _emit(
-              _state.copyWith(
-                loading: false,
-                restoring: false,
-                error: IapError(
-                  code: IapErrorCode.purchaseStreamFailed,
-                  message: 'Purchase stream error: $error',
+          _handlePurchaseUpdates(purchases).catchError(
+            (Object error, StackTrace stackTrace) {
+              _emit(
+                _state.copyWith(
+                  loading: false,
+                  restoring: false,
+                  error: IapError(
+                    code: IapErrorCode.purchaseStreamFailed,
+                    message: 'Purchase stream error: $error',
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            },
+          ),
         );
       },
       onError: (Object error, StackTrace stackTrace) {
@@ -106,7 +105,12 @@ class IapService implements IapServiceApi {
       },
     );
 
-    _emit(_state.copyWith(loading: true, clearError: true));
+    _emit(
+      _state.copyWith(
+        loading: true,
+        clearError: true,
+      ),
+    );
 
     final bool available;
     try {
@@ -170,7 +174,12 @@ class IapService implements IapServiceApi {
       return const <IapProduct>[];
     }
 
-    _emit(_state.copyWith(loading: true, clearError: true));
+    _emit(
+      _state.copyWith(
+        loading: true,
+        clearError: true,
+      ),
+    );
 
     final BillingQueryResult response;
     try {
@@ -206,11 +215,10 @@ class IapService implements IapServiceApi {
         ),
       );
 
-    final products =
-        response.products
-            .map((product) => product.product)
-            .toList(growable: false)
-          ..sort((left, right) => left.id.compareTo(right.id));
+    final products = response.products
+        .map((product) => product.product)
+        .toList(growable: false)
+      ..sort((left, right) => left.id.compareTo(right.id));
 
     _emit(
       _state.copyWith(
@@ -246,7 +254,11 @@ class IapService implements IapServiceApi {
     }
 
     _emit(
-      _state.copyWith(loading: true, clearError: true, clearLastPurchase: true),
+      _state.copyWith(
+        loading: true,
+        clearError: true,
+        clearLastPurchase: true,
+      ),
     );
 
     try {
@@ -297,7 +309,11 @@ class IapService implements IapServiceApi {
       await _gateway.restorePurchases();
       if (_state.restoring) {
         _emit(
-          _state.copyWith(loading: false, restoring: false, clearError: true),
+          _state.copyWith(
+            loading: false,
+            restoring: false,
+            clearError: true,
+          ),
         );
       }
     } catch (error) {
@@ -361,9 +377,8 @@ class IapService implements IapServiceApi {
   ) async {
     for (final purchase in purchaseDetailsList) {
       final normalizedPurchase = _normalizePurchase(purchase.purchase);
-      final normalizedBillingPurchase = purchase.copyWith(
-        purchase: normalizedPurchase,
-      );
+      final normalizedBillingPurchase =
+          purchase.copyWith(purchase: normalizedPurchase);
 
       switch (normalizedPurchase.status) {
         case IapPurchaseStatus.pending:
@@ -384,7 +399,8 @@ class IapService implements IapServiceApi {
               lastPurchase: normalizedPurchase,
               error: IapError(
                 code: IapErrorCode.purchaseFailed,
-                message: normalizedPurchase.errorMessage ?? 'Purchase failed.',
+                message:
+                    normalizedPurchase.errorMessage ?? 'Purchase failed.',
               ),
             ),
           );
@@ -399,8 +415,7 @@ class IapService implements IapServiceApi {
               error: IapError(
                 code: IapErrorCode.purchaseCancelled,
                 message:
-                    normalizedPurchase.errorMessage ??
-                    'Purchase was cancelled.',
+                    normalizedPurchase.errorMessage ?? 'Purchase was cancelled.',
               ),
             ),
           );
@@ -487,7 +502,8 @@ class IapService implements IapServiceApi {
         _state.copyWith(
           error: IapError(
             code: IapErrorCode.purchaseCompletionFailed,
-            message: 'Purchase completed but acknowledgement failed: $error',
+            message:
+                'Purchase completed but acknowledgement failed: $error',
           ),
         ),
       );
