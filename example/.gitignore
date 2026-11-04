@@ -1,0 +1,11 @@
+# Made by `flutter create .`: your own bundle ID goes here, not ours.
+/android/
+/ios/
+/.metadata
+/build/
+/.dart_tool/
+/.flutter-plugins
+/.flutter-plugins-dependencies
+*.iml
+/analysis_options.yaml
+/test/widget_test.dart

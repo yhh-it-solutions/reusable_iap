@@ -1,5 +1,5 @@
 name: reusable_iap_example
-description: Example app for the reusable_iap package.
+description: A small store built on reusable_iap, in clean architecture.
 publish_to: 'none'
 
 environment:
@@ -7,10 +7,13 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  equatable: ^3.0.0
   flutter:
     sdk: flutter
+  flutter_bloc: ^9.1.1
   reusable_iap:
     path: ../
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_lints: ^6.0.0
