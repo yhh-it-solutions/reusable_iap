@@ -1,6 +1,6 @@
 name: reusable_iap
 description: Headless Flutter in-app purchase service for catalog loading, purchases, restores, entitlements, and verification.
-version: 0.1.0
+version: 0.1.1
 
 environment:
   sdk: ^3.11.1
@@ -13,7 +13,7 @@ topics:
   - monetization
 
 dependencies:
-  equatable: ^2.0.8
+  equatable: ">=2.0.8 <4.0.0"
   flutter:
     sdk: flutter
   in_app_purchase: ^3.3.0

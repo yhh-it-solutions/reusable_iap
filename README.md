@@ -25,9 +25,13 @@ It wraps store availability checks, product loading, purchase updates, restore f
 
 ## Installation
 
+The package isn't on pub.dev, so depend on it from Git:
+
 ```yaml
 dependencies:
-  reusable_iap: ^0.1.0
+  reusable_iap:
+    git:
+      url: https://github.com/yhh-it-solutions/reusable_iap.git
 ```
 
 After adding the package, configure your products in App Store Connect / Google Play Console as usual.
@@ -118,3 +122,9 @@ The service depends on `BillingGateway`, not directly on `InAppPurchase.instance
 
 A minimal example app is included in `example/lib/main.dart`. Replace the sample product IDs with your own and run it on a configured iOS or Android device.
 
+## Good To Know
+
+- **Restores arrive after `restore()` returns.** It resolves once the request is sent. Restored purchases come in on the state stream afterwards, so give them a moment before treating a user as not subscribed. If `error.code` is `restoreFailed`, the store couldn't answer, which doesn't mean the user isn't subscribed.
+- **Entitlements only grow during a session.** A subscription that lapses while the app is open stays active until the next launch, when a fresh `restore()` finds only what's still active.
+- **One plan per subscription product.** On Google Play the package uses the first base plan or offer the store returns for an ID, so price and purchase always match. To sell two plans, use two product IDs.
+- **A failed verification leaves the purchase uncompleted.** The store sends it again, so a passing check can still deliver it, and Google Play refunds it if it's never acknowledged.

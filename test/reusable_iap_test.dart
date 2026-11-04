@@ -8,6 +8,10 @@ class FakeBillingGateway implements BillingGateway {
       StreamController<List<BillingPurchase>>.broadcast();
 
   bool available = true;
+  Object? availabilityError;
+  Object? queryError;
+  Object? buyError;
+  int availabilityChecks = 0;
   BillingQueryResult queryResult = const BillingQueryResult();
   final List<String> consumableBuys = <String>[];
   final List<String> nonConsumableBuys = <String>[];
@@ -18,12 +22,19 @@ class FakeBillingGateway implements BillingGateway {
   Stream<List<BillingPurchase>> get purchaseStream => _purchaseController.stream;
 
   @override
-  Future<bool> isAvailable() async => available;
+  Future<bool> isAvailable() async {
+    availabilityChecks += 1;
+    final error = availabilityError;
+    if (error != null) throw error;
+    return available;
+  }
 
   @override
   Future<BillingQueryResult> queryProducts(
     Set<IapProductDefinition> products,
   ) async {
+    final error = queryError;
+    if (error != null) throw error;
     return queryResult;
   }
 
@@ -37,6 +48,8 @@ class FakeBillingGateway implements BillingGateway {
 
   @override
   Future<void> buyNonConsumable(String productId) async {
+    final error = buyError;
+    if (error != null) throw error;
     nonConsumableBuys.add(productId);
   }
 
@@ -329,6 +342,160 @@ void main() {
     expect(gateway.restoreCalls, 1);
     expect(service.currentState.restoring, isFalse);
     expect(service.currentState.loading, isFalse);
+
+    service.dispose();
+  });
+
+  test('failed and cancelled purchases are completed when the store asks',
+      () async {
+    final service = IapService(
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
+      gateway: gateway,
+    );
+    await service.initialize();
+
+    gateway.emitPurchases([
+      billingPurchase(
+        'pro_monthly',
+        IapPurchaseStatus.error,
+        pendingCompletePurchase: true,
+      ),
+      billingPurchase(
+        'pro_monthly',
+        IapPurchaseStatus.canceled,
+        pendingCompletePurchase: true,
+      ),
+    ]);
+    await pumpEventQueue();
+
+    expect(gateway.completedProducts, ['pro_monthly', 'pro_monthly']);
+    expect(service.hasEntitlement('premium'), isFalse);
+
+    service.dispose();
+  });
+
+  test('a purchase the store refuses to start is reported, not left loading',
+      () async {
+    gateway
+      ..queryResult = BillingQueryResult(
+        products: [
+          billingProduct('pro_monthly', IapProductType.subscription),
+        ],
+      )
+      ..buyError = StateError('refused');
+    final service = IapService(
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
+      gateway: gateway,
+    );
+    await service.initialize();
+    await service.loadProducts();
+
+    await service.buy('pro_monthly');
+
+    expect(service.currentState.loading, isFalse);
+    expect(service.currentState.error?.code, IapErrorCode.purchaseFailed);
+
+    service.dispose();
+  });
+
+  test('an error checking the store is reported and can be retried', () async {
+    gateway.availabilityError = StateError('no billing client');
+    final service = IapService(
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
+      gateway: gateway,
+    );
+
+    await service.initialize();
+
+    expect(service.currentState.loading, isFalse);
+    expect(service.currentState.available, isFalse);
+    expect(service.currentState.error?.code, IapErrorCode.storeUnavailable);
+
+    gateway.availabilityError = null;
+    await service.loadProducts();
+
+    expect(service.currentState.available, isTrue);
+
+    service.dispose();
+  });
+
+  test('a store that was unavailable recovers on the next call', () async {
+    gateway
+      ..available = false
+      ..queryResult = BillingQueryResult(
+        products: [
+          billingProduct('pro_monthly', IapProductType.subscription),
+        ],
+      );
+    final service = IapService(
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
+      gateway: gateway,
+    );
+    await service.initialize();
+    expect(await service.loadProducts(), isEmpty);
+
+    gateway.available = true;
+    final products = await service.loadProducts();
+
+    expect(products.map((product) => product.id), ['pro_monthly']);
+    expect(service.currentState.error, isNull);
+
+    service.dispose();
+  });
+
+  test('an error loading products is reported, not thrown', () async {
+    gateway.queryError = StateError('offline');
+    final service = IapService(
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
+      gateway: gateway,
+    );
+    await service.initialize();
+
+    expect(await service.loadProducts(), isEmpty);
+
+    expect(service.currentState.loading, isFalse);
+    expect(service.currentState.error?.code, IapErrorCode.productQueryFailed);
+
+    service.dispose();
+  });
+
+  test('a failed refresh keeps the products that loaded earlier', () async {
+    gateway.queryResult = BillingQueryResult(
+      products: [
+        billingProduct('pro_monthly', IapProductType.subscription),
+      ],
+    );
+    final service = IapService(
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
+      gateway: gateway,
+    );
+    await service.initialize();
+    await service.loadProducts();
+
+    gateway.queryResult = const BillingQueryResult(errorMessage: 'offline');
+    final products = await service.loadProducts();
+
+    expect(products.map((product) => product.id), ['pro_monthly']);
+    expect(service.currentState.error?.code, IapErrorCode.productQueryFailed);
+
+    await service.buy('pro_monthly');
+    expect(gateway.nonConsumableBuys, ['pro_monthly']);
+
+    service.dispose();
+  });
+
+  test('overlapping calls share one check of the store', () async {
+    final service = IapService(
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
+      gateway: gateway,
+    );
+
+    await Future.wait([service.initialize(), service.initialize()]);
+    expect(gateway.availabilityChecks, 1);
+
+    // Finished, so a later call really checks again.
+    await service.initialize();
+    expect(gateway.availabilityChecks, 2);
 
     service.dispose();
   });

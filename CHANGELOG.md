@@ -1,3 +1,14 @@
+## 0.1.1
+
+- Allow `equatable` 3
+- Offer one product per ID on Google Play, which returns an entry for each base plan and offer of a subscription. The price shown is now the plan that gets bought
+- Report a purchase the store refuses to start, instead of staying in `loading` with nothing on the purchase stream
+- Complete failed and cancelled purchases that the store marks as pending completion, as the `in_app_purchase` docs do
+- Report errors from `isAvailable` and `queryProducts` through state, instead of throwing and staying in `loading`
+- Keep loaded products when a refresh fails
+- Check the store again while it is unavailable, so a later `loadProducts`, `buy` or `restore` recovers
+- Share one store check between overlapping `initialize` calls
+
 ## 0.1.0
 
 - Renamed the package to `reusable_iap`

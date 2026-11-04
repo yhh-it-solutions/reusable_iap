@@ -55,16 +55,24 @@ class FlutterBillingGateway implements BillingGateway {
 
     final response = await _iap.queryProductDetails(definitionsById.keys.toSet());
 
-    _productsById
-      ..clear()
-      ..addEntries(
-        response.productDetails.map(
-          (product) => MapEntry(product.id, product),
-        ),
-      );
+    // Google Play returns one entry per base plan and offer of a subscription,
+    // all with the same ID. Keeping just the first means the price on screen
+    // is the plan that gets bought.
+    final uniqueProducts = <String, ProductDetails>{};
+    for (final product in response.productDetails) {
+      uniqueProducts.putIfAbsent(product.id, () => product);
+    }
+
+    // A failed refresh must not lose products that loaded earlier: they may be
+    // on screen, and the player can still buy them.
+    if (response.error == null || uniqueProducts.isNotEmpty) {
+      _productsById
+        ..clear()
+        ..addAll(uniqueProducts);
+    }
 
     return BillingQueryResult(
-      products: response.productDetails
+      products: uniqueProducts.values
           .map(
             (product) => BillingProduct(
               product: IapProduct(
@@ -93,17 +101,19 @@ class FlutterBillingGateway implements BillingGateway {
   }) async {
     final product = _requireProduct(productId);
     final purchaseParam = PurchaseParam(productDetails: product);
-    await _iap.buyConsumable(
+    final started = await _iap.buyConsumable(
       purchaseParam: purchaseParam,
       autoConsume: autoConsume,
     );
+    _requireStarted(started, productId);
   }
 
   @override
   Future<void> buyNonConsumable(String productId) async {
     final product = _requireProduct(productId);
     final purchaseParam = PurchaseParam(productDetails: product);
-    await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+    final started = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+    _requireStarted(started, productId);
   }
 
   @override
@@ -120,6 +130,14 @@ class FlutterBillingGateway implements BillingGateway {
       );
     }
     await _iap.completePurchase(rawPurchase);
+  }
+
+  /// Google Play answers `false` when it couldn't open the purchase sheet, and
+  /// then sends nothing on the purchase stream, so the caller has to be told.
+  void _requireStarted(bool started, String productId) {
+    if (!started) {
+      throw StateError('The store could not start the purchase of $productId.');
+    }
   }
 
   ProductDetails _requireProduct(String productId) {

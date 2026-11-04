@@ -35,6 +35,7 @@ class IapService implements IapServiceApi {
   StreamSubscription<List<BillingPurchase>>? _purchaseSubscription;
   IapState _state = const IapState();
   bool _disposed = false;
+  Future<void>? _initializing;
 
   @override
   Stream<IapState> get state async* {
@@ -55,8 +56,15 @@ class IapService implements IapServiceApi {
     }
   }
 
+  /// Calls that overlap share one check of the store.
   @override
-  Future<void> initialize() async {
+  Future<void> initialize() {
+    return _initializing ??= _initialize().whenComplete(() {
+      _initializing = null;
+    });
+  }
+
+  Future<void> _initialize() async {
     _purchaseSubscription ??= _gateway.purchaseStream.listen(
       (purchases) {
         unawaited(
@@ -97,7 +105,23 @@ class IapService implements IapServiceApi {
       ),
     );
 
-    final available = await _gateway.isAvailable();
+    final bool available;
+    try {
+      available = await _gateway.isAvailable();
+    } catch (error) {
+      _emit(
+        _state.copyWith(
+          available: false,
+          loading: false,
+          error: IapError(
+            code: IapErrorCode.storeUnavailable,
+            message: 'Unable to reach the store: $error',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!available) {
       _emit(
         _state.copyWith(
@@ -150,7 +174,32 @@ class IapService implements IapServiceApi {
       ),
     );
 
-    final response = await _gateway.queryProducts(config.products);
+    final BillingQueryResult response;
+    try {
+      response = await _gateway.queryProducts(config.products);
+    } catch (error) {
+      _emit(
+        _state.copyWith(
+          loading: false,
+          error: IapError(
+            code: IapErrorCode.productQueryFailed,
+            message: 'Unable to load products: $error',
+          ),
+        ),
+      );
+      return _state.products;
+    }
+
+    final error = _catalogErrorFor(response);
+
+    // A failed refresh keeps what loaded earlier: it may be on screen, and the
+    // player can still buy it.
+    if (error?.code == IapErrorCode.productQueryFailed &&
+        response.products.isEmpty) {
+      _emit(_state.copyWith(loading: false, error: error));
+      return _state.products;
+    }
+
     _catalogById
       ..clear()
       ..addEntries(
@@ -164,7 +213,6 @@ class IapService implements IapServiceApi {
         .toList(growable: false)
       ..sort((left, right) => left.id.compareTo(right.id));
 
-    final error = _catalogErrorFor(response);
     _emit(
       _state.copyWith(
         loading: false,
@@ -280,8 +328,10 @@ class IapService implements IapServiceApi {
     return _state.activeEntitlements.contains(entitlement);
   }
 
+  /// Checks again while the store is unavailable: Google Play's billing client
+  /// can still be connecting at launch, and the player may have been offline.
   Future<void> _ensureInitialized() async {
-    if (!_state.initialized) {
+    if (!_state.initialized || !_state.available) {
       await initialize();
     }
   }
@@ -347,6 +397,7 @@ class IapService implements IapServiceApi {
               ),
             ),
           );
+          await _completePurchaseIfNeeded(normalizedBillingPurchase);
           break;
         case IapPurchaseStatus.canceled:
           _emit(
@@ -361,6 +412,7 @@ class IapService implements IapServiceApi {
               ),
             ),
           );
+          await _completePurchaseIfNeeded(normalizedBillingPurchase);
           break;
         case IapPurchaseStatus.purchased:
         case IapPurchaseStatus.restored:
@@ -376,6 +428,9 @@ class IapService implements IapServiceApi {
     return purchase.copyWith(productType: productType);
   }
 
+  /// A purchase that fails verification is left uncompleted on purpose: the
+  /// store sends it again, so a passing check can still deliver it, and Google
+  /// Play refunds it if it never gets acknowledged.
   Future<void> _processSuccessfulPurchase(BillingPurchase purchase) async {
     final normalizedPurchase = purchase.purchase;
 
