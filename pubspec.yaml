@@ -1,6 +1,6 @@
 name: reusable_iap
 description: In-app purchases for Flutter. Subscriptions, consumables and non-consumables on the App Store and Google Play, with optional backend verification.
-version: 0.1.1
+version: 0.1.2
 
 environment:
   sdk: ^3.11.1

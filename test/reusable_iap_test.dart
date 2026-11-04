@@ -19,7 +19,8 @@ class FakeBillingGateway implements BillingGateway {
   int restoreCalls = 0;
 
   @override
-  Stream<List<BillingPurchase>> get purchaseStream => _purchaseController.stream;
+  Stream<List<BillingPurchase>> get purchaseStream =>
+      _purchaseController.stream;
 
   @override
   Future<bool> isAvailable() async {
@@ -72,10 +73,7 @@ class FakeBillingGateway implements BillingGateway {
   }
 }
 
-BillingProduct billingProduct(
-  String id,
-  IapProductType type,
-) {
+BillingProduct billingProduct(String id, IapProductType type) {
   return BillingProduct(
     product: IapProduct(
       id: id,
@@ -111,6 +109,51 @@ BillingPurchase billingPurchase(
 }
 
 void main() {
+  test(
+    'a listener that joins before initialize sees every later state',
+    () async {
+      final service = IapService(
+        config: IapConfig(),
+        gateway: FakeBillingGateway(),
+      );
+      addTearDown(service.dispose);
+
+      final seen = <IapState>[];
+      final subscription = service.state.listen(seen.add);
+      addTearDown(subscription.cancel);
+
+      await service.initialize();
+      await pumpEventQueue();
+
+      expect(seen.last.available, isTrue);
+      expect(seen.last, service.currentState);
+    },
+  );
+
+  test('a new listener gets the current state first', () async {
+    final service = IapService(
+      config: IapConfig(),
+      gateway: FakeBillingGateway(),
+    );
+    addTearDown(service.dispose);
+    await service.initialize();
+
+    expect(await service.state.first, service.currentState);
+  });
+
+  test('the state stream ends on dispose', () async {
+    final service = IapService(
+      config: IapConfig(),
+      gateway: FakeBillingGateway(),
+    );
+    final done = service.state.toList();
+    await pumpEventQueue();
+
+    service.dispose();
+
+    expect(await done, hasLength(1));
+  });
+
   late FakeBillingGateway gateway;
 
   setUp(() {
@@ -126,9 +169,7 @@ void main() {
 
     final service = IapService(
       config: IapConfig(
-        products: {
-          const IapProductDefinition.subscription('pro_monthly'),
-        },
+        products: {const IapProductDefinition.subscription('pro_monthly')},
       ),
       gateway: gateway,
     );
@@ -145,166 +186,152 @@ void main() {
     service.dispose();
   });
 
-  test('loadProducts normalizes the catalog and buy routes by product type',
-      () async {
-    gateway.queryResult = BillingQueryResult(
-      products: [
-        billingProduct('coins_100', IapProductType.consumable),
-        billingProduct('lifetime_unlock', IapProductType.nonConsumable),
-        billingProduct('pro_monthly', IapProductType.subscription),
-      ],
-    );
+  test(
+    'loadProducts normalizes the catalog and buy routes by product type',
+    () async {
+      gateway.queryResult = BillingQueryResult(
+        products: [
+          billingProduct('coins_100', IapProductType.consumable),
+          billingProduct('lifetime_unlock', IapProductType.nonConsumable),
+          billingProduct('pro_monthly', IapProductType.subscription),
+        ],
+      );
 
-    final service = IapService(
-      config: IapConfig(
-        consumableIds: {'coins_100'},
-        nonConsumableIds: {'lifetime_unlock'},
-        subscriptionIds: {'pro_monthly'},
-      ),
-      gateway: gateway,
-    );
+      final service = IapService(
+        config: IapConfig(
+          consumableIds: {'coins_100'},
+          nonConsumableIds: {'lifetime_unlock'},
+          subscriptionIds: {'pro_monthly'},
+        ),
+        gateway: gateway,
+      );
 
-    await service.initialize();
-    final products = await service.loadProducts();
+      await service.initialize();
+      final products = await service.loadProducts();
 
-    expect(products, hasLength(3));
-    expect(
-      products
-          .firstWhere((product) => product.id == 'pro_monthly')
-          .isSubscription,
-      isTrue,
-    );
+      expect(products, hasLength(3));
+      expect(
+        products
+            .firstWhere((product) => product.id == 'pro_monthly')
+            .isSubscription,
+        isTrue,
+      );
 
-    await service.buy('coins_100');
-    await service.buy('lifetime_unlock');
-    await service.buy('pro_monthly');
+      await service.buy('coins_100');
+      await service.buy('lifetime_unlock');
+      await service.buy('pro_monthly');
 
-    expect(gateway.consumableBuys, ['coins_100']);
-    expect(
-      gateway.nonConsumableBuys,
-      ['lifetime_unlock', 'pro_monthly'],
-    );
+      expect(gateway.consumableBuys, ['coins_100']);
+      expect(gateway.nonConsumableBuys, ['lifetime_unlock', 'pro_monthly']);
 
-    service.dispose();
-  });
+      service.dispose();
+    },
+  );
 
-  test('purchased and restored updates grant entitlements and complete purchase',
-      () async {
-    gateway.queryResult = BillingQueryResult(
-      products: [
-        billingProduct('pro_monthly', IapProductType.subscription),
-        billingProduct('lifetime_unlock', IapProductType.nonConsumable),
-      ],
-    );
+  test(
+    'purchased and restored updates grant entitlements and complete purchase',
+    () async {
+      gateway.queryResult = BillingQueryResult(
+        products: [
+          billingProduct('pro_monthly', IapProductType.subscription),
+          billingProduct('lifetime_unlock', IapProductType.nonConsumable),
+        ],
+      );
 
-    final service = IapService(
-      config: IapConfig(
-        subscriptionIds: {'pro_monthly'},
-        nonConsumableIds: {'lifetime_unlock'},
-      ),
-      entitlementResolver: (purchase) {
-        if (purchase.productId == 'pro_monthly' ||
-            purchase.productId == 'lifetime_unlock') {
-          return {'premium'};
-        }
-        return const <String>{};
-      },
-      gateway: gateway,
-    );
+      final service = IapService(
+        config: IapConfig(
+          subscriptionIds: {'pro_monthly'},
+          nonConsumableIds: {'lifetime_unlock'},
+        ),
+        entitlementResolver: (purchase) {
+          if (purchase.productId == 'pro_monthly' ||
+              purchase.productId == 'lifetime_unlock') {
+            return {'premium'};
+          }
+          return const <String>{};
+        },
+        gateway: gateway,
+      );
 
-    await service.initialize();
-    await service.loadProducts();
+      await service.initialize();
+      await service.loadProducts();
 
-    gateway.emitPurchases([
-      billingPurchase(
-        'pro_monthly',
-        IapPurchaseStatus.purchased,
-        pendingCompletePurchase: true,
-      ),
-      billingPurchase(
-        'lifetime_unlock',
+      gateway.emitPurchases([
+        billingPurchase(
+          'pro_monthly',
+          IapPurchaseStatus.purchased,
+          pendingCompletePurchase: true,
+        ),
+        billingPurchase(
+          'lifetime_unlock',
+          IapPurchaseStatus.restored,
+          pendingCompletePurchase: true,
+        ),
+      ]);
+
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.hasEntitlement('premium'), isTrue);
+      expect(
+        service.currentState.lastPurchase?.status,
         IapPurchaseStatus.restored,
-        pendingCompletePurchase: true,
-      ),
-    ]);
+      );
+      expect(gateway.completedProducts, ['pro_monthly', 'lifetime_unlock']);
 
-    await Future<void>.delayed(Duration.zero);
+      service.dispose();
+    },
+  );
 
-    expect(service.hasEntitlement('premium'), isTrue);
-    expect(
-      service.currentState.lastPurchase?.status,
-      IapPurchaseStatus.restored,
-    );
-    expect(
-      gateway.completedProducts,
-      ['pro_monthly', 'lifetime_unlock'],
-    );
+  test(
+    'verification failure blocks entitlements and acknowledgement',
+    () async {
+      gateway.queryResult = BillingQueryResult(
+        products: [billingProduct('pro_monthly', IapProductType.subscription)],
+      );
 
-    service.dispose();
-  });
+      final service = IapService(
+        config: IapConfig(subscriptionIds: {'pro_monthly'}),
+        verifyPurchase: (_) async => false,
+        entitlementResolver: (_) => {'premium'},
+        gateway: gateway,
+      );
 
-  test('verification failure blocks entitlements and acknowledgement', () async {
-    gateway.queryResult = BillingQueryResult(
-      products: [
-        billingProduct('pro_monthly', IapProductType.subscription),
-      ],
-    );
+      await service.initialize();
+      await service.loadProducts();
 
-    final service = IapService(
-      config: IapConfig(
-        subscriptionIds: {'pro_monthly'},
-      ),
-      verifyPurchase: (_) async => false,
-      entitlementResolver: (_) => {'premium'},
-      gateway: gateway,
-    );
+      gateway.emitPurchases([
+        billingPurchase(
+          'pro_monthly',
+          IapPurchaseStatus.purchased,
+          pendingCompletePurchase: true,
+        ),
+      ]);
 
-    await service.initialize();
-    await service.loadProducts();
+      await Future<void>.delayed(Duration.zero);
 
-    gateway.emitPurchases([
-      billingPurchase(
-        'pro_monthly',
-        IapPurchaseStatus.purchased,
-        pendingCompletePurchase: true,
-      ),
-    ]);
+      expect(service.hasEntitlement('premium'), isFalse);
+      expect(service.currentState.error?.code, IapErrorCode.verificationFailed);
+      expect(gateway.completedProducts, isEmpty);
 
-    await Future<void>.delayed(Duration.zero);
-
-    expect(service.hasEntitlement('premium'), isFalse);
-    expect(
-      service.currentState.error?.code,
-      IapErrorCode.verificationFailed,
-    );
-    expect(gateway.completedProducts, isEmpty);
-
-    service.dispose();
-  });
+      service.dispose();
+    },
+  );
 
   test('canceled and failed purchases surface normalized errors', () async {
     final service = IapService(
-      config: IapConfig(
-        nonConsumableIds: {'lifetime_unlock'},
-      ),
+      config: IapConfig(nonConsumableIds: {'lifetime_unlock'}),
       gateway: gateway,
     );
 
     await service.initialize();
 
     gateway.emitPurchases([
-      billingPurchase(
-        'lifetime_unlock',
-        IapPurchaseStatus.canceled,
-      ),
+      billingPurchase('lifetime_unlock', IapPurchaseStatus.canceled),
     ]);
 
     await Future<void>.delayed(Duration.zero);
 
-    expect(
-      service.currentState.error?.code,
-      IapErrorCode.purchaseCancelled,
-    );
+    expect(service.currentState.error?.code, IapErrorCode.purchaseCancelled);
 
     gateway.emitPurchases([
       billingPurchase(
@@ -316,23 +343,15 @@ void main() {
 
     await Future<void>.delayed(Duration.zero);
 
-    expect(
-      service.currentState.error?.code,
-      IapErrorCode.purchaseFailed,
-    );
-    expect(
-      service.currentState.error?.message,
-      'Billing unavailable',
-    );
+    expect(service.currentState.error?.code, IapErrorCode.purchaseFailed);
+    expect(service.currentState.error?.message, 'Billing unavailable');
 
     service.dispose();
   });
 
   test('restore delegates to the gateway and resets restoring state', () async {
     final service = IapService(
-      config: IapConfig(
-        subscriptionIds: {'pro_monthly'},
-      ),
+      config: IapConfig(subscriptionIds: {'pro_monthly'}),
       gateway: gateway,
     );
 
@@ -346,57 +365,61 @@ void main() {
     service.dispose();
   });
 
-  test('failed and cancelled purchases are completed when the store asks',
-      () async {
-    final service = IapService(
-      config: IapConfig(subscriptionIds: {'pro_monthly'}),
-      gateway: gateway,
-    );
-    await service.initialize();
+  test(
+    'failed and cancelled purchases are completed when the store asks',
+    () async {
+      final service = IapService(
+        config: IapConfig(subscriptionIds: {'pro_monthly'}),
+        gateway: gateway,
+      );
+      await service.initialize();
 
-    gateway.emitPurchases([
-      billingPurchase(
-        'pro_monthly',
-        IapPurchaseStatus.error,
-        pendingCompletePurchase: true,
-      ),
-      billingPurchase(
-        'pro_monthly',
-        IapPurchaseStatus.canceled,
-        pendingCompletePurchase: true,
-      ),
-    ]);
-    await pumpEventQueue();
+      gateway.emitPurchases([
+        billingPurchase(
+          'pro_monthly',
+          IapPurchaseStatus.error,
+          pendingCompletePurchase: true,
+        ),
+        billingPurchase(
+          'pro_monthly',
+          IapPurchaseStatus.canceled,
+          pendingCompletePurchase: true,
+        ),
+      ]);
+      await pumpEventQueue();
 
-    expect(gateway.completedProducts, ['pro_monthly', 'pro_monthly']);
-    expect(service.hasEntitlement('premium'), isFalse);
+      expect(gateway.completedProducts, ['pro_monthly', 'pro_monthly']);
+      expect(service.hasEntitlement('premium'), isFalse);
 
-    service.dispose();
-  });
+      service.dispose();
+    },
+  );
 
-  test('a purchase the store refuses to start is reported, not left loading',
-      () async {
-    gateway
-      ..queryResult = BillingQueryResult(
-        products: [
-          billingProduct('pro_monthly', IapProductType.subscription),
-        ],
-      )
-      ..buyError = StateError('refused');
-    final service = IapService(
-      config: IapConfig(subscriptionIds: {'pro_monthly'}),
-      gateway: gateway,
-    );
-    await service.initialize();
-    await service.loadProducts();
+  test(
+    'a purchase the store refuses to start is reported, not left loading',
+    () async {
+      gateway
+        ..queryResult = BillingQueryResult(
+          products: [
+            billingProduct('pro_monthly', IapProductType.subscription),
+          ],
+        )
+        ..buyError = StateError('refused');
+      final service = IapService(
+        config: IapConfig(subscriptionIds: {'pro_monthly'}),
+        gateway: gateway,
+      );
+      await service.initialize();
+      await service.loadProducts();
 
-    await service.buy('pro_monthly');
+      await service.buy('pro_monthly');
 
-    expect(service.currentState.loading, isFalse);
-    expect(service.currentState.error?.code, IapErrorCode.purchaseFailed);
+      expect(service.currentState.loading, isFalse);
+      expect(service.currentState.error?.code, IapErrorCode.purchaseFailed);
 
-    service.dispose();
-  });
+      service.dispose();
+    },
+  );
 
   test('an error checking the store is reported and can be retried', () async {
     gateway.availabilityError = StateError('no billing client');
@@ -423,9 +446,7 @@ void main() {
     gateway
       ..available = false
       ..queryResult = BillingQueryResult(
-        products: [
-          billingProduct('pro_monthly', IapProductType.subscription),
-        ],
+        products: [billingProduct('pro_monthly', IapProductType.subscription)],
       );
     final service = IapService(
       config: IapConfig(subscriptionIds: {'pro_monthly'}),
@@ -461,9 +482,7 @@ void main() {
 
   test('a failed refresh keeps the products that loaded earlier', () async {
     gateway.queryResult = BillingQueryResult(
-      products: [
-        billingProduct('pro_monthly', IapProductType.subscription),
-      ],
+      products: [billingProduct('pro_monthly', IapProductType.subscription)],
     );
     final service = IapService(
       config: IapConfig(subscriptionIds: {'pro_monthly'}),
