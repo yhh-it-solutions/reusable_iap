@@ -3,6 +3,7 @@
 - Fix a new `state` listener missing updates that came just after it joined, which could leave it stuck on `loading`
 - Rebuild the example as a small store in clean architecture, with tests that need no store
 - Add a clean architecture guide, and links to in-depth articles from the README and guides
+- Add the MIT license
 
 ## 0.1.1
 

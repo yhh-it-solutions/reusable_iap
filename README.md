@@ -5,6 +5,7 @@
 [![Flutter: iOS and Android](https://img.shields.io/badge/Flutter-iOS%20%7C%20Android-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Built on in_app_purchase](https://img.shields.io/badge/built%20on-in__app__purchase-0175C2)](https://pub.dev/packages/in_app_purchase)
 ![StoreKit 2 and Google Play Billing](https://img.shields.io/badge/runs%20on-StoreKit%202%20%7C%20Play%20Billing-555555)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Calling `buy()` is the easy part. Then Google Play refunds a sale because nobody acknowledged it. One subscription comes back as several products. A payment finishes while your app is closed, and lands on a launch you weren't expecting.
 
@@ -183,3 +184,9 @@ These come from an 18-part series on in-app purchases in Flutter.
 **Fix**
 
 - [Flutter In-App Purchase Not Working](https://bimalkhatri.com.np/blogs/flutter-in-app-purchase-not-working): products not found, refunds after three days, purchases replayed on every launch.
+
+## License
+
+[MIT](LICENSE), © 2026 YHH IT Solutions. Use it, change it and ship it, including in paid apps, as long as you keep the license notice.
+
+Built at YHH IT Solutions by Ashish Kunwar and Sudip Paudel. Bimal Khatri supervised the work, improved and optimized the code, and wrote the test cases.
