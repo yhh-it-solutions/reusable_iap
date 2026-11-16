@@ -1,3 +1,9 @@
+## 0.1.3
+
+- Add `showManageSubscriptionsSheet`, which opens Apple's manage-subscriptions sheet inside the app, listing only the app's own subscriptions, so a player can cancel there
+- Add `manageSubscriptionsUri`, the store page to open instead: the exact subscription on Google Play, or the Apple ID's subscription list on older iOS
+- Require `in_app_purchase_storekit` 0.4.17, which fixes purchases never completing on iOS 27 and iPadOS 27. Flutter 3.41 or later is now needed
+
 ## 0.1.2
 
 - Fix a new `state` listener missing updates that came just after it joined, which could leave it stuck on `loading`
