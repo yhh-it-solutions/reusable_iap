@@ -26,6 +26,7 @@ Calling `buy()` is the easy part. Then Google Play refunds a sale because nobody
 | Purchases arrive when they like | A payment can land at launch, long after the buy button was tapped | One stream of state, whenever it happens |
 | Product IDs spread through your screens | A new yearly plan means editing every `if (id == 'pro_monthly')` | Screens ask about `premium`, and one function maps IDs to it |
 | Tests need a real store | Every test needs a device and a test account | Swap in a fake `BillingGateway` and run anywhere |
+| Players can't find where to cancel | Apps can't cancel a subscription; only the store can | Opens the store's own screen: an in-app sheet with only your app's subscriptions on iOS 15+, the exact subscription on Google Play |
 
 ## What it is, and what it isn't
 
@@ -152,7 +153,7 @@ Read more: the [clean architecture guide](doc/clean_architecture.md) builds it s
 |---|---|
 | [In-app purchases explained](doc/in_app_purchases_explained.md) | The concepts and the three product types |
 | [Store setup](doc/store_setup.md) | What you need, what to create, and where |
-| [Using the package](doc/using_the_package.md) | Installing it, then from catalog to paywall, errors and testing |
+| [Using the package](doc/using_the_package.md) | Installing it, then from catalog to paywall, errors, cancelling and testing |
 | [Clean architecture](doc/clean_architecture.md) | Domain, data and presentation layers, explained on the example |
 | [Your own backend](doc/your_own_backend.md) | Verifying purchases on your server |
 | [Troubleshooting](doc/troubleshooting.md) | Products not found, refunds, stuck purchases |

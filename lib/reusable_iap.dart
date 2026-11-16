@@ -5,3 +5,4 @@ export 'src/iap_models.dart';
 export 'src/iap_service.dart';
 export 'src/iap_service_api.dart';
 export 'src/iap_state.dart';
+export 'src/manage_subscriptions.dart';

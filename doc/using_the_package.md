@@ -147,6 +147,35 @@ Show your own wording, based on `error.code`:
 iap.dispose();
 ```
 
+## 8. Let players manage or cancel
+
+No app can cancel a subscription; only the store can. Open the store's own screen and let the player cancel there:
+
+```dart
+Future<void> manageSubscription() async {
+  if (await showManageSubscriptionsSheet()) return; // iOS 15+: in-app sheet, this app only
+
+  await launchUrl(
+    manageSubscriptionsUri(
+      productId: 'pro_monthly',          // Android: opens this subscription
+      packageName: 'com.example.app',    // Android: needed together with productId
+    ),
+    mode: LaunchMode.externalApplication,
+  );
+}
+```
+
+| Platform | What the player sees |
+|---|---|
+| iOS 15+ | A sheet inside your app with only your app's subscriptions |
+| Older iOS, or if the sheet fails | The App Store's list of every subscription on the Apple ID. Apple has no link to one app's subscriptions |
+| Android, with `productId` and `packageName` | Your subscription in the Play Store app |
+| Android, without them | The Play Store's list of every subscription on the Google account |
+
+`url_launcher` is your app's dependency, not the package's.
+
+A cancelled subscription keeps working until the period it was paid for ends. After that the store stops returning it, and your launch check from step 5 removes access. There is nothing to listen for.
+
 ## Testing
 
 The service talks to the store through `BillingGateway`, so tests never touch a real store:
